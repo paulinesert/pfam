@@ -35,7 +35,8 @@ Create a new (if needed) YAML config file that you will store in the config fold
 
 Then to train, use the following command : 
 
-```python train.py --config_file_path PATH/TO/YOUR/CONFIG_FILE
+```bash 
+python train.py --config_file_path PATH/TO/YOUR/CONFIG_FILE
 ```
 
 ## Results on baseline config 

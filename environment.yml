@@ -1,0 +1,18 @@
+name: pfam
+channels:
+  - pytorch
+  - anaconda
+  - conda-forge
+  - defaults
+dependencies:
+  - ipykernel=6.9.1=py39hecd8cb5_0
+  - matplotlib=3.6.2=py39hecd8cb5_0
+  - numpy=1.23.5=py39he696674_0
+  - pandas=1.5.2=py39h07fba90_0
+  - python=3.9.15=h218abb5_2
+  - pytorch=1.13.1=py3.9_0
+  - pyyaml=6.0=py39hca72f7f_1
+  - seaborn=0.12.1=py39hecd8cb5_0
+  - tensorboard=2.11.2=pyhd8ed1ab_0
+  - torchvision=0.14.1=py39_cpu
+  - tqdm=4.64.1=py39hecd8cb5_0
