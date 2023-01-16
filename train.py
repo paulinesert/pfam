@@ -165,7 +165,7 @@ def run(
             train_eval_loop(is_train=False, dataloader=val_dl, epoch=epoch)
         
 if __name__ == '__main__': 
-    parser = ArgumentParser(description="Runner for MLP")
+    parser = ArgumentParser(description="Config file")
     parser.add_argument(
         "--config_file_path",
         "-c",
