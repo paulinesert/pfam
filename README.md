@@ -49,7 +49,7 @@ TBD.
 
 TBD. 
 
-Given more time and resources, one lead to explore would have been to research the state of the art to see how models that use attention could have been applied here. One of the main challenge for those models would be to handle the sometimes very long protein sequence whose lengths are too big for current classic Transformer architecture. 
+Given more time and resources, one lead to explore would have been to research the state of the art to see how models that use attention (e.g. the encoder of Transformer model) could have been applied here  (with no causal masking since the whole sequence is known). One of the main challenge for those models would be to handle the sometimes very long protein sequence whose lengths are too big for current classic Transformer architecture. Splitting the sequence in sub-sequences of acceptable lengths for the current Transformer architecture could be one idea to tackle the problem but this would require discussions with biologists first to assess the validity of this scheme.
 Another idea would have been to use a pre-trained model that models the protein sequences as language models do in NLP. 
 Such models would be trained on a very large amount of protein sequences with a masking scheme such as in BERT (i.e. masking some amino acids and let the model predict them). ProteinBERT [[2]](#2) would be a starting point. 
 Such model could later be used to perform the down-stream task of classifying the function of a protein sequence using the embeddings learnt by the pre-trained model.
