@@ -1,4 +1,5 @@
 import os 
+import numpy as np
 import torch 
 import torch.nn as nn 
 
@@ -12,6 +13,11 @@ from models.protCNN import ProtCNN
 from utils.config import generate_config
 from utils.data import BucketSampler, custom_collate_fn, PFAMDataset
 
+def get_nb_trainable_parameters(parameters):
+    # Compute the number of trainable parameters in a model 
+    model_parameters = filter(lambda p: p.requires_grad, parameters)
+    params = sum([np.prod(p.size()) for p in model_parameters])
+    return params
 
 def get_train_eval_loop(
     model: nn.Module,
