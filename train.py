@@ -131,23 +131,25 @@ def run(
     val_dataset = PFAMDataset('dev', families_dict=train_dataset.families_dict, seq_lengths_bounds=data_hparams.seq_lengths_bounds, filter_fam=False, overwrite=data_hparams.overwrite)
 
     # Create samplers and dataloaders
-    train_sampler = BucketSampler(train_dataset.length, buckets=data_hparams.bucket_sampler_buckets, shuffle=True, batch_size=train_hparams.batch_size, drop_last=True)
-    train_dl =  DataLoader(train_dataset, batch_sampler=train_sampler, collate_fn=custom_collate_fn)
+    #train_sampler = BucketSampler(train_dataset.length, buckets=data_hparams.bucket_sampler_buckets, shuffle=True, batch_size=train_hparams.batch_size, drop_last=True)
+    train_dl =  DataLoader(train_dataset, batch_size=train_hparams.batch_size,  collate_fn=custom_collate_fn, shuffle=False)
     
-    val_sampler = BucketSampler(val_dataset.length, buckets=data_hparams.bucket_sampler_buckets, shuffle=False, batch_size=train_hparams.batch_size, drop_last=True)
-    val_dl = DataLoader(val_dataset, batch_sampler=val_sampler, collate_fn=custom_collate_fn)
+    #val_sampler = BucketSampler(val_dataset.length, buckets=data_hparams.bucket_sampler_buckets, shuffle=False, batch_size=train_hparams.batch_size, drop_last=True)
+    val_dl = DataLoader(val_dataset, collate_fn=custom_collate_fn, batch_size=train_hparams.batch_size, shuffle=False)
     
     # Create model 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_classes = len(train_dataset.families_dict)
     model = ProtCNN(in_channels=model_hparams.in_channels, num_classes=n_classes, filters=model_hparams.filters, kernel_size=model_hparams.kernel_size, dilation_rate=model_hparams.dilation_rate, bottleneck_factor=model_hparams.bottleneck_factor, num_residual_block=model_hparams.num_residual_block)
     model.to(device)
+    print(f'The model has {get_nb_trainable_parameters(model.parameters())} trainable parameters.')
+
 
     # Create loss function 
     loss_fn = nn.CrossEntropyLoss()
 
     # Create optimizer 
-    optimizer = torch.optim.Adam(model.parameters(), lr=train_hparams.learning_rate, weight_decay=train_hparams.weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=train_hparams.learning_rate)
 
     # Create logger (Tensorboard)
     writer = SummaryWriter(log_dir=train_hparams.log_dir)
@@ -168,11 +170,11 @@ if __name__ == '__main__':
     parser = ArgumentParser(description="Config file")
     parser.add_argument(
         "--config_file_path",
-        "-c",
         help="path to the config file",
         default="./config/baseline_config.yaml",
     )
     args = parser.parse_args()
     config = generate_config(args.config_file_path) # turn YAML config file into nested Namespace args
+    print(config)
     os.makedirs(config.train.log_dir, exist_ok=True) # create the dir where the logs will be stored
     run(config.data, config.model, config.train)
