@@ -95,7 +95,7 @@ def get_train_eval_loop(
             avg_loss = running_loss / n_batches 
 
             running_n_samples += inputs.shape[0]
-            running_correct_labels = (predicted_class == labels).float().sum().item()
+            running_correct_labels += (predicted_class == labels).float().sum().item()
             avg_accuracy =  running_correct_labels / running_n_samples
 
             # Log info and metrics 
@@ -124,7 +124,8 @@ def run(
     model_hparams: Namespace, 
     train_hparams: Namespace
 ):
-    """_summary_
+    """ Perform training and evaluation steps for a given number of epochs.
+    data_hparams, model_hparams and train_hparams, respectively store the hyperparameters used by the data processing, the model and the training. 
 
     Args:
         data_hparams (Namespace): the hyperparameters for the data

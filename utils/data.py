@@ -152,29 +152,30 @@ class PFAMDataset(Dataset):
 
         start = time.time()
         self.data = read_all_shards(self.partition, self.raw_dir_path)
-        
+
         # Filter to keep only the most frequent families
         if self.partition == 'train' and self.filter_fam :
             most_freq_fam = compute_most_freq_fam(self.data.family_accession.to_list(), self.n_fam)
             self.data = self.data[self.data['family_accession'].isin(most_freq_fam)]
+            
         # Filter on sequence lengths
         if self.seq_lengths_bounds != (None, None): 
             self.data = self.data[self.data['seq_len'].between(*self.seq_lengths_bounds)]
-
-        self.data = self.data.copy() # avoid writing over slices issue
 
         # Create mapping between families and their associated integer
         if self.partition == 'train':
             self.families_dict = generate_family_int_mapping(self.data['family_accession'].unique().tolist())
         else: 
             # keep only the samples that are present in the training set 
-            self.data = self.data[self.data['family_accession'].isin(self.families_dict.keys())].copy() 
-        
+            self.data = self.data[self.data['family_accession'].isin(self.families_dict.keys())]
+
+        #self.data = self.data.head(16) # Toy data
+
         # Encoding of sequences and family accession
         start = time.time()
         self.input = self.data['sequence'].apply(seq_to_onehot).to_list()
         self.target = self.data['family_accession'].apply(family_to_onehot, args=[self.families_dict]).to_list()
-        self.length = self.data['seq_len'].to_list()
+        self.length = [len(seq) for seq in self.input] # length of sequence may have changed after encoding due to removal of uncommon amino acid
         print(f"Elapsed time to process {self.partition} set: {time.time()-start}. It contains {len(self.data)} samples.")
 
         # Save processed data to avoid having to process it if already done 
