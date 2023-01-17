@@ -136,7 +136,8 @@ def run(
     # Create datasets for all the train and val partitions
     train_dataset = PFAMDataset('train', families_dict=None, seq_lengths_bounds=data_hparams.seq_lengths_bounds, filter_fam=data_hparams.filter_fam, n_fam=data_hparams.n_fam, overwrite=data_hparams.overwrite)
     val_dataset = PFAMDataset('dev', families_dict=train_dataset.families_dict, seq_lengths_bounds=data_hparams.seq_lengths_bounds, filter_fam=False, overwrite=data_hparams.overwrite)
-
+    test_dataset = PFAMDataset('test', families_dict=train_dataset.families_dict, seq_lengths_bounds=data_hparams.seq_lengths_bounds, filter_fam=False, overwrite=data_hparams.overwrite)
+    
     # Create samplers and dataloaders
     #train_sampler = BucketSampler(train_dataset.length, buckets=data_hparams.bucket_sampler_buckets, shuffle=True, batch_size=train_hparams.batch_size, drop_last=True)
     train_dl =  DataLoader(train_dataset, batch_size=train_hparams.batch_size,  collate_fn=custom_collate_fn, shuffle=False)
@@ -144,6 +145,8 @@ def run(
     #val_sampler = BucketSampler(val_dataset.length, buckets=data_hparams.bucket_sampler_buckets, shuffle=False, batch_size=train_hparams.batch_size, drop_last=True)
     val_dl = DataLoader(val_dataset, collate_fn=custom_collate_fn, batch_size=train_hparams.batch_size, shuffle=False)
     
+    test_dl = DataLoader(test_dataset, collate_fn=custom_collate_fn, batch_size=train_hparams.batch_size, shuffle=False)
+
     # Create model 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_classes = len(train_dataset.families_dict)
@@ -172,6 +175,12 @@ def run(
         with torch.no_grad(): 
             # Validation 
             train_eval_loop(is_train=False, dataloader=val_dl, epoch=epoch)
+
+    # Evaluation 
+    train_eval_loop(is_train=False, dataloader=test_dl, epoch=epoch) #TODO change : either evaluate.py or other function or adapt train_eval_loop
+
+    torch.save(model.state_dict(), train_hparams.log_dir + 'model_weights.pt')
+    torch.save(train_dataset.families_dict, train_hparams.log_dir + 'families_dict.pt')
         
 if __name__ == '__main__': 
     parser = ArgumentParser(description="Config file")
