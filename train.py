@@ -8,6 +8,7 @@ from argparse import ArgumentParser, Namespace
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+from time import time_ns
 from tqdm import tqdm
 
 from models.protCNN import ProtCNN
@@ -167,7 +168,9 @@ def run(
     scheduler = ReduceLROnPlateau(optimizer, factor=train_hparams.lr_factor, patience=train_hparams.lr_patience)
 
     # Create logger (Tensorboard)
-    writer = SummaryWriter(log_dir=train_hparams.log_dir)
+    log_filepath = os.path.join(train_hparams.log_dir, str(time_ns()))
+    writer = SummaryWriter(log_dir=log_filepath)
+    print(f'Logs will be saved at {log_filepath}')
 
     # Get train / eval loop function 
     train_eval_loop = get_train_eval_loop(model, optimizer, loss_fn, writer)
