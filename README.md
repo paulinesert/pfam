@@ -3,9 +3,6 @@
 PFAM is a Python library for performing prediction of the function of protein domains using the PFAM Dataset. 
 It attempts to propose a methode to solve the Kaggle associated with the paper [[1]](#1) : https://www.kaggle.com/datasets/googleai/pfam-seed-random-split
 
-
-DISCLAIMER : This repository is still WIP and not fully tested. Notably missing is the evaluate.py file to evaluate the model on the test set. 
-
 ## Method 
 
 The method used in this repository is a reimplementation of the ProtCNN architecture presented in [[1]](#1). 
@@ -14,8 +11,11 @@ The use of dilated convolution layers in [[1]](#1) enables to model long-range d
 
 ## Architecture overview 
 
-Figure of the architecture to be added. 
+The following figures illustrate the architecture and are taken from [[1]](#1).
 
+![The sequence is first encoded as a sequence of one-hot vectors of amino acids. Then passed to an initial convolution and multiple residual blocks with dilated convolutions. Finally, a max-pooling along the sequence's lengths along with a linear layer and softmax activation yields the predicted probabilites.](https://github.com/paulinesert/pfam/blob/main/data/imgs/architecture.png)
+
+![Each residual block is composed of a batch norm followed by a ReLU activation and then a dilated convolution. The output of the dilated convultion is then normalized using batch norm, passed through a ReLU activation and then to a bottleneck convolution whose purposes is to reduce the number of channels. A skip connection is then performed.](https://github.com/paulinesert/pfam/blob/main/data/imgs/residual_block.png)
 
 ## Installation
 
