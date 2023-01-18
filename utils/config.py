@@ -11,7 +11,6 @@ def open_config(config_path: str)-> Namespace :
         try:
             config = yaml.safe_load(file)
         except yaml.YAMLError as exc:
-            log.error(exc)
             raise exc
     return config 
 

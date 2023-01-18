@@ -2,7 +2,7 @@ data:
   seq_lengths_bounds: '(None, None)'
   bucket_sampler_buckets: '(0, 2400, 200)' # (len_min, len_max, len_step) of the buckets of the lengths of the sequences used by the custom sampler (cf utils/data.py)
   filter_fam: True # filter the training set to only keep most frequent families
-  n_fam: 1000 # number of most frequent families to keep in the training set 
+  n_fam: 250 # number of most frequent families to keep in the training set 
   overwrite: True # overwrite
 
 
@@ -19,5 +19,6 @@ train:
   batch_size: 32
   learning_rate: 0.001
   log_dir: 'runs'
+  log_step: 250
 
 

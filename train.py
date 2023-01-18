@@ -44,14 +44,16 @@ def get_train_eval_loop(
     def train_eval_loop(
         is_train: bool, 
         dataloader: DataLoader, 
-        epoch: int
-    ): 
+        epoch: int, 
+        log_step: int, 
+    ) -> tuple: 
         """ Compute one epoch (training) or compute loss and metrics over the validation set.
 
         Args:
             is_train (bool): If True, the model is in training mode, it is eval mode otherwise.
             dataloader (DataLoader): the partition's dataloader
             epoch (int): the current epoch
+            log_step (int): Each log_step train/val steps the metrics are logged. If None, no logging is performed 
         """
         # 
         global global_train_step, global_val_step
@@ -87,7 +89,7 @@ def get_train_eval_loop(
             # Make predictions
             predicted_class = torch.argmax(outputs, dim=1)
             labels = torch.argmax(targets, dim=1)
-            batch_accuracy = (predicted_class == predicted_class).float().mean().item()
+            batch_accuracy = (predicted_class == labels).float().mean().item()
 
             # Compute averaged losses and other metrics 
             running_loss += loss.item()
@@ -101,20 +103,23 @@ def get_train_eval_loop(
             # Log info and metrics 
             if is_train: 
                 global_train_step += 1
-                lr = optimizer.param_groups[0]['lr']
-                writer.add_scalar('train/loss', loss.item(), global_train_step)
-                writer.add_scalar('train/accuracy', batch_accuracy, global_train_step)
-                writer.add_scalar('train/learning_rate', lr, global_train_step)
-                pbar.set_description(f'Train : Epoch {epoch} - loss: {avg_loss:.2f} - accuracy: {avg_accuracy:.2f}')
+                if log_step and (global_train_step % log_step) == 0: 
+                    lr = optimizer.param_groups[0]['lr']
+                    writer.add_scalar('train/loss', loss.item(), global_train_step)
+                    writer.add_scalar('train/accuracy', batch_accuracy, global_train_step)
+                    writer.add_scalar('train/learning_rate', lr, global_train_step)
+                    pbar.set_description(f'Train : Epoch {epoch} - loss: {avg_loss:.2f} - accuracy: {avg_accuracy:.2f}')
 
 
 
             else: 
                 global_val_step += 1
-                writer.add_scalar('val/loss', loss.item(), global_val_step)
-                writer.add_scalar('val/accuracy', batch_accuracy, global_val_step)
-                pbar.set_description(f'Val : Epoch {epoch} - loss: {avg_loss:.2f} - accuracy: {avg_accuracy:.2f}')
+                if log_step and (global_val_step % log_step) == 0 : 
+                    writer.add_scalar('val/loss', loss.item(), global_val_step)
+                    writer.add_scalar('val/accuracy', batch_accuracy, global_val_step)
+                    pbar.set_description(f'Val : Epoch {epoch} - loss: {avg_loss:.2f} - accuracy: {avg_accuracy:.2f}')
 
+        return avg_loss, avg_accuracy
 
     return train_eval_loop
 
@@ -122,7 +127,9 @@ def get_train_eval_loop(
 def run(
     data_hparams: Namespace, 
     model_hparams: Namespace, 
-    train_hparams: Namespace
+    train_hparams: Namespace,
+    test: bool, 
+    store: bool
 ):
     """ Perform training and evaluation steps for a given number of epochs.
     data_hparams, model_hparams and train_hparams, respectively store the hyperparameters used by the data processing, the model and the training. 
@@ -131,12 +138,13 @@ def run(
         data_hparams (Namespace): the hyperparameters for the data
         model_hparams (Namespace): the hyperparameters for the model
         train_hparams (Namespace): the hyperparameters for the training
+        test (bool): If True, the test set is also evaluated
+        store (bool): If True, the weights of the model and the dict of families are stored
     """
 
     # Create datasets for all the train and val partitions
     train_dataset = PFAMDataset('train', families_dict=None, seq_lengths_bounds=data_hparams.seq_lengths_bounds, filter_fam=data_hparams.filter_fam, n_fam=data_hparams.n_fam, overwrite=data_hparams.overwrite)
     val_dataset = PFAMDataset('dev', families_dict=train_dataset.families_dict, seq_lengths_bounds=data_hparams.seq_lengths_bounds, filter_fam=False, overwrite=data_hparams.overwrite)
-    test_dataset = PFAMDataset('test', families_dict=train_dataset.families_dict, seq_lengths_bounds=data_hparams.seq_lengths_bounds, filter_fam=False, overwrite=data_hparams.overwrite)
     
     # Create samplers and dataloaders
     #train_sampler = BucketSampler(train_dataset.length, buckets=data_hparams.bucket_sampler_buckets, shuffle=True, batch_size=train_hparams.batch_size, drop_last=True)
@@ -145,8 +153,6 @@ def run(
     #val_sampler = BucketSampler(val_dataset.length, buckets=data_hparams.bucket_sampler_buckets, shuffle=False, batch_size=train_hparams.batch_size, drop_last=True)
     val_dl = DataLoader(val_dataset, collate_fn=custom_collate_fn, batch_size=train_hparams.batch_size, shuffle=False)
     
-    test_dl = DataLoader(test_dataset, collate_fn=custom_collate_fn, batch_size=train_hparams.batch_size, shuffle=False)
-
     # Create model 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_classes = len(train_dataset.families_dict)
@@ -170,27 +176,43 @@ def run(
     # Training / eval loop : 
     for epoch in range(train_hparams.n_epochs):
         # Training
-        train_eval_loop(is_train=True, dataloader=train_dl, epoch=epoch)
+        _, _ = train_eval_loop(is_train=True, dataloader=train_dl, epoch=epoch, log_step=train_hparams.log_step)
 
         with torch.no_grad(): 
             # Validation 
-            train_eval_loop(is_train=False, dataloader=val_dl, epoch=epoch)
+            _, _ = train_eval_loop(is_train=False, dataloader=val_dl, epoch=epoch, log_step=train_hparams.log_step)
 
-    # Evaluation 
-    train_eval_loop(is_train=False, dataloader=test_dl, epoch=epoch) #TODO change : either evaluate.py or other function or adapt train_eval_loop
 
-    torch.save(model.state_dict(), train_hparams.log_dir + 'model_weights.pt')
-    torch.save(train_dataset.families_dict, train_hparams.log_dir + 'families_dict.pt')
+    if test: 
+        # Evaluation 
+        test_dataset = PFAMDataset('test', families_dict=train_dataset.families_dict, seq_lengths_bounds=data_hparams.seq_lengths_bounds, filter_fam=False, overwrite=data_hparams.overwrite)
+        test_dl = DataLoader(test_dataset, collate_fn=custom_collate_fn, batch_size=train_hparams.batch_size, shuffle=False)
+        avg_test_loss, avg_test_acc = train_eval_loop(is_train=False, dataloader=test_dl, epoch=epoch, log_step=None) 
+        print(f'Test : Epoch {epoch} - loss: {avg_test_loss:.2f} - accuracy: {avg_test_acc:.2f}')
+
+    if store:
+        torch.save(model.state_dict(), os.path.join(train_hparams.log_dir,'model_weights.pt'))
+        torch.save(train_dataset.families_dict, os.path.join(train_hparams.log_dir,'families_dict.pt'))
         
 if __name__ == '__main__': 
     parser = ArgumentParser(description="Config file")
     parser.add_argument(
         "--config_file_path",
-        help="path to the config file",
+        help="Path to the config file",
         default="./config/baseline_config.yaml",
+    )
+    parser.add_argument(
+        "--test",
+        action='store_true',
+        help="If True, the test set is also evaluated. Default is False."
+    )
+    parser.add_argument(
+        "--store",
+        action='store_false',
+        help="If True, the weights of the model are stored. Default is True.",
     )
     args = parser.parse_args()
     config = generate_config(args.config_file_path) # turn YAML config file into nested Namespace args
     print(config)
     os.makedirs(config.train.log_dir, exist_ok=True) # create the dir where the logs will be stored
-    run(config.data, config.model, config.train)
+    run(config.data, config.model, config.train, args.test, args.store)
