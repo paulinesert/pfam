@@ -5,6 +5,7 @@ import torch.nn as nn
 
 
 from argparse import ArgumentParser, Namespace
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
@@ -147,10 +148,7 @@ def run(
     val_dataset = PFAMDataset('dev', families_dict=train_dataset.families_dict, seq_lengths_bounds=data_hparams.seq_lengths_bounds, filter_fam=False, overwrite=data_hparams.overwrite)
     
     # Create samplers and dataloaders
-    #train_sampler = BucketSampler(train_dataset.length, buckets=data_hparams.bucket_sampler_buckets, shuffle=True, batch_size=train_hparams.batch_size, drop_last=True)
     train_dl =  DataLoader(train_dataset, batch_size=train_hparams.batch_size,  collate_fn=custom_collate_fn, shuffle=False)
-    
-    #val_sampler = BucketSampler(val_dataset.length, buckets=data_hparams.bucket_sampler_buckets, shuffle=False, batch_size=train_hparams.batch_size, drop_last=True)
     val_dl = DataLoader(val_dataset, collate_fn=custom_collate_fn, batch_size=train_hparams.batch_size, shuffle=False)
     
     # Create model 
@@ -166,6 +164,7 @@ def run(
 
     # Create optimizer 
     optimizer = torch.optim.Adam(model.parameters(), lr=train_hparams.learning_rate)
+    scheduler = ReduceLROnPlateau(optimizer, factor=train_hparams.lr_factor, patience=train_hparams.lr_patience)
 
     # Create logger (Tensorboard)
     writer = SummaryWriter(log_dir=train_hparams.log_dir)
@@ -174,13 +173,28 @@ def run(
     train_eval_loop = get_train_eval_loop(model, optimizer, loss_fn, writer)
 
     # Training / eval loop : 
+    val_loss = float('inf')
+    prev_loss = float('inf')
+    dec = 0
+
     for epoch in range(train_hparams.n_epochs):
         # Training
         _, _ = train_eval_loop(is_train=True, dataloader=train_dl, epoch=epoch, log_step=train_hparams.log_step)
 
         with torch.no_grad(): 
             # Validation 
-            _, _ = train_eval_loop(is_train=False, dataloader=val_dl, epoch=epoch, log_step=train_hparams.log_step)
+            val_loss, _ = train_eval_loop(is_train=False, dataloader=val_dl, epoch=epoch, log_step=train_hparams.log_step)
+            scheduler.step(val_loss)
+
+        # Early stopping 
+        if val_loss > prev_loss : 
+            dec += 1 
+        else:
+            dec = 0 
+    
+        if dec == train_hparams.lr_patience + 2: 
+            break 
+        prev_loss = val_loss
 
 
     if test: 

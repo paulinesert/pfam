@@ -200,7 +200,6 @@ def custom_collate_fn(batch):
     # Turn [B, L, C] tensors into [B, C, L] - B=batch, L=length, C=channels
     inputs = inputs.permute((0,2,1)).float()
     masks = masks.permute((0,2,1))
-
     return inputs, targets, masks, lengths
 
 
