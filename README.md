@@ -19,7 +19,7 @@ The following figures illustrate the architecture and are taken from [[1]](#1).
 
 ## Installation
 
-Download the data from the Kaggle page and store it in a data folder at the root of this directory. 
+Download the data from the Kaggle page and store it in a `data` folder at the root of this directory. 
 Install the requirements using either ```pip``` or ```conda```. 
 
 ```bash
@@ -43,13 +43,18 @@ python train.py --config_file_path PATH/TO/YOUR/CONFIG_FILE --store --test
 
 `store` and `test` arguments enable to store the model's parameters and evaluate the model on the test set.
 
+To train on Google Colab, download the project and put it on Google Colab, including the data, and then use the notebook `Training_PFAM_on_Colab.ipynb`. 
+
 ## Results on baseline config 
 
-TBD. 
+Given the baseline config hyperparameters `config/baseline_config.yaml`, the model obtained an accuracy of 0.93 on the test and showed no overfitting during training. Training logs are available in `Training_PFAM_on_Colab.ipynb` and the associated tensorboard in `runs/baseline/` as well as the models weights (`model_weights.pt`) and the dictionary of the families (and their associated integer mapping) (`families_dict.pt`).
+
+Given time, no further tuning of the hyperparameters has been done aside from using the dev set to add early-stopping and learning rate decay when the loss plateaued. 
+
 
 ## Conclusions on the project 
 
-TBD. 
+1D-CNN are well suited to handle sequences of varying lengths that range from a few dozens of amino acids to more than 1000 amino acids as it can be seen in the performances of this model. Here we used dilated convolutions introduced in [[1]](#1) that are able to capture long range dependencies in the sequence. 
 
 Given more time and resources, one lead to explore would have been to research the state of the art to see how models that use attention (e.g. the encoder of Transformer model) could have been applied here  (with no causal masking since the whole sequence is known). One of the main challenge for those models would be to handle the sometimes very long protein sequence whose lengths are too big for current classic Transformer architecture. Splitting the sequence in sub-sequences of acceptable lengths for the current Transformer architecture could be one idea to tackle the problem but this would require discussions with biologists first to assess the validity of this scheme.
 
