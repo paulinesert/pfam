@@ -38,8 +38,10 @@ Create a new (if needed) YAML config file that you will store in the config fold
 Then to train, use the following command : 
 
 ```bash 
-python train.py --config_file_path PATH/TO/YOUR/CONFIG_FILE
+python train.py --config_file_path PATH/TO/YOUR/CONFIG_FILE --store --test
 ```
+
+`store` and `test` arguments enable to store the model's parameters and evaluate the model on the test set.
 
 ## Results on baseline config 
 
